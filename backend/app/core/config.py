@@ -19,11 +19,15 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
 
     # Sigil AI observability
-    sigil_enabled: bool = False
+    sigil_enabled: bool = True
     sigil_endpoint: str = ""
     sigil_auth_tenant_id: str = ""
     sigil_auth_token: str = ""
     otel_service_name: str = "pokemon-qa-api"
+
+    # OpenLIT observability
+    openlit_enabled: bool = True
+    openlit_otlp_endpoint: str = "http://localhost:4318"
 
 
 settings = Settings()

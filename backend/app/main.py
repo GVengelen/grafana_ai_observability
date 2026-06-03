@@ -13,7 +13,7 @@ from app.db.session import Base, engine
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     observability.setup(settings)
-    if settings.sigil_enabled:
+    if settings.sigil_enabled or settings.openlit_enabled:
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
         SQLAlchemyInstrumentor().instrument(engine=engine)
     Base.metadata.create_all(bind=engine)

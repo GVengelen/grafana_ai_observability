@@ -1,7 +1,8 @@
 PROJECT := pokemon-qa
 ROOT := $(shell pwd)
 
-.PHONY: kind-up kind-down build-images load-images deploy undeploy restart
+.PHONY: kind-up kind-down build-images load-images deploy undeploy restart \
+        openlit-up openlit-down openlit-ui
 
 kind-up:
 	kind create cluster --config infra/kind/kind-config.yaml
@@ -28,3 +29,20 @@ undeploy:
 
 restart:
 	kubectl rollout restart deployment -n $(PROJECT)
+
+openlit-up:
+	helm repo add openlit https://openlit.github.io/helm/ 2>/dev/null || true
+	helm repo update openlit
+	helm upgrade --install openlit openlit/openlit \
+	  --namespace $(PROJECT) \
+	  --set service.type=ClusterIP \
+	  --set config.database.host=openlit-db.$(PROJECT).svc.cluster.local \
+	  --set config.database.name=openlit \
+	  --set config.usageMetrics=false \
+	  --wait
+
+openlit-down:
+	helm uninstall openlit --namespace $(PROJECT)
+
+openlit-ui:
+	while true; do kubectl port-forward -n $(PROJECT) svc/openlit 3000:3000; sleep 1; done
