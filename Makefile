@@ -35,6 +35,7 @@ openlit-up:
 	helm repo update openlit
 	helm upgrade --install openlit openlit/openlit \
 	  --namespace $(PROJECT) \
+	  --set image.tag=1.21.1 \
 	  --set service.type=ClusterIP \
 	  --set config.database.host=openlit-db.$(PROJECT).svc.cluster.local \
 	  --set config.database.name=openlit \
