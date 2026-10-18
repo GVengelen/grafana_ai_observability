@@ -3,7 +3,6 @@ import re
 
 from anthropic import AsyncAnthropic
 
-from app.core import observability
 from app.core.config import settings
 
 
@@ -24,7 +23,7 @@ def _extract_json(text: str) -> dict:
     return json.loads(text.strip())
 
 
-async def generate_question_from_context(context: dict, conversation_id: str = "", is_subject_only: bool = False) -> dict:
+async def generate_question_from_context(context: dict, is_subject_only: bool = False) -> dict:
     # No-op for local development when no API key is set.
     if not settings.anthropic_api_key:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
@@ -47,23 +46,7 @@ async def generate_question_from_context(context: dict, conversation_id: str = "
         ],
     }
 
-    if observability.sigil_client is not None:
-        from sigil_sdk_anthropic import AnthropicOptions
-        from sigil_sdk_anthropic import messages as sigil_messages
-
-        message = await sigil_messages.create_async(
-            observability.sigil_client,
-            request,
-            lambda req: anthropic_client.messages.create(**req),
-            AnthropicOptions(
-                conversation_id=conversation_id,
-                agent_name="pokemon-qa",
-                agent_version="1.0.0",
-                tags={"pokemon_name": context.get("name", "")},
-            ),
-        )
-    else:
-        message = await anthropic_client.messages.create(**request)
+    message = await anthropic_client.messages.create(**request)
 
     text = ""
     for block in message.content:

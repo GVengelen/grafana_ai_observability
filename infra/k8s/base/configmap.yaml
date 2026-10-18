@@ -9,14 +9,5 @@ data:
   DATABASE_URL: "postgresql+psycopg://postgres:postgres@postgres:5432/pokemon_qa"
   POKEAPI_BASE_URL: "https://pokeapi.co/api/v2"
   ANTHROPIC_MODEL: "claude-haiku-4-5-20251001"
-  # Sigil AI observability
-  SIGIL_ENABLED: "true"
-  SIGIL_ENDPOINT: "https://sigil-prod-eu-west-2.grafana.net"
-  SIGIL_PROTOCOL: "http"
-  SIGIL_AUTH_MODE: "basic"
-  SIGIL_AUTH_TENANT_ID: "1260200"
   # OTel OTLP — endpoint from stack OpenTelemetry card
   OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp-gateway-prod-eu-west-2.grafana.net/otlp"
-  # OpenLIT observability
-  OPENLIT_ENABLED: "true"
-  OPENLIT_OTLP_ENDPOINT: "http://openlit:4318"

@@ -35,7 +35,7 @@ async def generate_question(payload: GenerateQuestionRequest, db: Session = Depe
 
     try:
         question_payload = await generate_question_from_context(
-            pokemon_context, conversation_id=payload.session_id, is_subject_only=is_subject_only
+            pokemon_context, is_subject_only=is_subject_only
         )
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Question generation failed: {exc}") from exc

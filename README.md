@@ -49,12 +49,16 @@ flowchart TD
 
 ## Quickstart
 
-1. Create a local Anthropic key secret for Kubernetes:
+1. Create the Kubernetes secret from the example in the repo root (`secret.yaml` is gitignored, so credentials stay out of git):
 
 ```bash
-cp infra/k8s/base/secret.example.yaml infra/k8s/base/secret.yaml
-# edit ANTHROPIC_API_KEY in infra/k8s/base/secret.yaml
+cp secret.example.yaml infra/k8s/base/secret.yaml
 ```
+
+Then edit `infra/k8s/base/secret.yaml`:
+
+- `ANTHROPIC_API_KEY`: your Anthropic API key.
+- `OTEL_EXPORTER_OTLP_HEADERS`: Grafana Cloud OTLP auth, in the form `Authorization=Basic%20<base64>`, where `<base64>` is `<otlp-instance-id>:<glc_token>` base64-encoded (the example file shows the command).
 
 2. Start KIND and ingress:
 
