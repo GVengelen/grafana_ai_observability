@@ -3,6 +3,9 @@ import re
 
 from anthropic import AsyncAnthropic
 
+from agento11y_anthropic import AnthropicOptions, messages
+
+from app.core import observability
 from app.core.config import settings
 
 
@@ -12,6 +15,10 @@ SYSTEM_PROMPT = (
     "Output ONLY raw JSON with keys: prompt, answer, explanation. "
     "Do not wrap the JSON in markdown code fences or any other text."
 )
+
+# One logical role: a single system prompt, no tools. Bump on prompt changes.
+AGENT_NAME = "pokemon-trivia-generator"
+AGENT_VERSION = "1.0.0"
 
 
 def _extract_json(text: str) -> dict:
@@ -23,7 +30,9 @@ def _extract_json(text: str) -> dict:
     return json.loads(text.strip())
 
 
-async def generate_question_from_context(context: dict, is_subject_only: bool = False) -> dict:
+async def generate_question_from_context(
+    context: dict, is_subject_only: bool = False, conversation_id: str = ""
+) -> dict:
     # No-op for local development when no API key is set.
     if not settings.anthropic_api_key:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
@@ -46,7 +55,21 @@ async def generate_question_from_context(context: dict, is_subject_only: bool = 
         ],
     }
 
-    message = await anthropic_client.messages.create(**request)
+    agento11y_client = observability.get_agento11y_client()
+    if agento11y_client is None:
+        message = await anthropic_client.messages.create(**request)
+    else:
+        message = await messages.create_async(
+            agento11y_client,
+            request,
+            lambda req: anthropic_client.messages.create(**req),
+            AnthropicOptions(
+                conversation_id=conversation_id,
+                agent_name=AGENT_NAME,
+                agent_version=AGENT_VERSION,
+                tags={"subject_only": str(is_subject_only).lower()},
+            ),
+        )
 
     text = ""
     for block in message.content:
