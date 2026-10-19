@@ -1,5 +1,4 @@
 import json
-import re
 
 from anthropic import AsyncAnthropic
 
@@ -12,22 +11,24 @@ from app.core.config import settings
 SYSTEM_PROMPT = (
     "You generate one concise trivia question about the given subject and provide the exact answer and short explanation. "
     "If the subject is a Pokemon, focus on Pokemon characteristics. For any other subject, ask a factual question about it. "
-    "Output ONLY raw JSON with keys: prompt, answer, explanation. "
-    "Do not wrap the JSON in markdown code fences or any other text."
+    "Respond with keys: prompt, answer, explanation."
 )
+
+# Enforced via Anthropic structured outputs (constrained decoding), so the reply is always valid JSON.
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "prompt": {"type": "string"},
+        "answer": {"type": "string"},
+        "explanation": {"type": "string"},
+    },
+    "required": ["prompt", "answer", "explanation"],
+    "additionalProperties": False,
+}
 
 # One logical role: a single system prompt, no tools. Bump on prompt changes.
 AGENT_NAME = "pokemon-trivia-generator"
 AGENT_VERSION = "1.0.0"
-
-
-def _extract_json(text: str) -> dict:
-    """Strip optional markdown code fences then parse JSON."""
-    text = text.strip()
-    # Remove ```json ... ``` or ``` ... ``` wrappers if present
-    text = re.sub(r"^```(?:json)?\s*", "", text)
-    text = re.sub(r"\s*```$", "", text)
-    return json.loads(text.strip())
 
 
 async def generate_question_from_context(
@@ -43,13 +44,14 @@ async def generate_question_from_context(
         "model": settings.anthropic_model,
         "max_tokens": 250,
         "system": SYSTEM_PROMPT,
+        "output_config": {"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
         "messages": [
             {
                 "role": "user",
                 "content": (
                     f"Ask a question about: {context['name']}"
                     if is_subject_only
-                    else f"Create a Pokemon trivia question based on this context: {context}. Output JSON only."
+                    else f"Create a Pokemon trivia question based on this context: {context}."
                 ),
             }
         ],
@@ -76,4 +78,4 @@ async def generate_question_from_context(
         if getattr(block, "type", None) == "text":
             text += block.text
 
-    return _extract_json(text)
+    return json.loads(text)
