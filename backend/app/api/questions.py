@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -28,15 +29,18 @@ async def generate_question(payload: GenerateQuestionRequest, db: Session = Depe
 
     try:
         pokemon_context = await fetch_pokemon_context(payload.pokemon_name)
-        is_subject_only = False
-    except Exception:
-        pokemon_context = {"name": payload.pokemon_name}
-        is_subject_only = True
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise HTTPException(
+                status_code=404, detail=f"'{payload.pokemon_name}' is not a known Pokemon"
+            ) from exc
+        raise HTTPException(status_code=502, detail="Pokemon lookup failed") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Pokemon lookup failed") from exc
 
     try:
         question_payload = await generate_question_from_context(
             pokemon_context,
-            is_subject_only=is_subject_only,
             conversation_id=payload.session_id,
         )
     except Exception as exc:
