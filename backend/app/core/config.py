@@ -18,6 +18,12 @@ class Settings(BaseSettings):
 
     api_prefix: str = "/api/v1"
 
+    # Agent Observability guards (preflight hooks). The SDK has no env vars for these.
+    # Production can set AGENTO11Y_GUARDS_FAIL_OPEN=false (strict mode: block when the guard is unreachable).
+    agento11y_guards_enabled: bool = True
+    agento11y_guards_fail_open: bool = True
+    agento11y_guards_timeout_ms: int = 5000
+
     # OpenTelemetry
     otel_enabled: bool = True
     otel_service_name: str = "pokemon-qa-api"

@@ -67,21 +67,31 @@ def setup(settings: "Settings") -> None:
 
     HTTPXClientInstrumentor().instrument()
 
-    _setup_agento11y()
+    _setup_agento11y(settings)
 
 
-def _setup_agento11y() -> None:
+def _setup_agento11y(settings: "Settings") -> None:
     """Create the generation-export client from canonical AGENTO11Y_* env vars."""
     global _agento11y_client  # noqa: PLW0603
 
     if not os.environ.get("AGENTO11Y_ENDPOINT"):
         return
 
-    from agento11y import Client, ClientConfig
+    from agento11y import Client, ClientConfig, HooksConfig
 
     # Telemetry must never block app startup: bad/missing config disables it.
     try:
-        _agento11y_client = Client(ClientConfig())
+        _agento11y_client = Client(
+            ClientConfig(
+                hooks=HooksConfig(
+                    enabled=settings.agento11y_guards_enabled,
+                    phases=["preflight"],
+                    timeout_seconds=settings.agento11y_guards_timeout_ms / 1000,
+                    # True: guard outage lets the LLM call proceed (dev). False: strict, outage raises.
+                    fail_open=settings.agento11y_guards_fail_open,
+                )
+            )
+        )
     except Exception:  # noqa: BLE001
         logging.getLogger(__name__).warning(
             "Agent Observability disabled: invalid AGENTO11Y_* config "

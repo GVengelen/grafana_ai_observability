@@ -1,3 +1,5 @@
+import logging
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -13,8 +15,12 @@ from app.schemas.questions import (
     SubmitAnswerRequest,
     SubmitAnswerResponse,
 )
-from app.services.claude_client import generate_question_from_context
+from agento11y import HookTransportError
+
+from app.services.claude_client import BLOCKED_MESSAGE, GuardBlockedError, generate_question_from_context
 from app.services.pokeapi_client import fetch_pokemon_context
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
@@ -37,12 +43,18 @@ async def generate_question(payload: GenerateQuestionRequest, db: Session = Depe
         raise HTTPException(status_code=502, detail="Pokemon lookup failed") from exc
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail="Pokemon lookup failed") from exc
-
+    print(f"pokemon_context: {pokemon_context}")
     try:
         question_payload = await generate_question_from_context(
             pokemon_context,
             conversation_id=payload.session_id,
         )
+    except GuardBlockedError as exc:
+        raise HTTPException(status_code=403, detail=BLOCKED_MESSAGE) from exc
+    except HookTransportError as exc:
+        # Strict mode (fail_open=false): guard unreachable. Don't leak internals.
+        logger.error("guard unavailable in strict mode conversation_id=%s", payload.session_id)
+        raise HTTPException(status_code=503, detail="Safety check unavailable. Please try again later.") from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Question generation failed: {exc}") from exc
 
