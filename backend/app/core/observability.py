@@ -7,10 +7,15 @@ Initialisation order:
   1. TracerProvider
   2. MeterProvider
   3. httpx instrumentation
+  4. Agent Observability client (needs the providers above)
+
+Shutdown runs in reverse: the Agent Observability client first, then OTel.
 """
 
 from __future__ import annotations
 
+import logging
+import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -19,6 +24,12 @@ if TYPE_CHECKING:
 # Module-level singletons populated by setup().
 _tp = None
 _mp = None
+_agento11y_client = None
+
+
+def get_agento11y_client():
+    """Return the Agent Observability client, or None when not configured."""
+    return _agento11y_client
 
 
 def setup(settings: "Settings") -> None:
@@ -56,10 +67,37 @@ def setup(settings: "Settings") -> None:
 
     HTTPXClientInstrumentor().instrument()
 
+    _setup_agento11y()
+
+
+def _setup_agento11y() -> None:
+    """Create the generation-export client from canonical AGENTO11Y_* env vars."""
+    global _agento11y_client  # noqa: PLW0603
+
+    if not os.environ.get("AGENTO11Y_ENDPOINT"):
+        return
+
+    from agento11y import Client, ClientConfig
+
+    # Telemetry must never block app startup: bad/missing config disables it.
+    try:
+        _agento11y_client = Client(ClientConfig())
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "Agent Observability disabled: invalid AGENTO11Y_* config "
+            "(is AGENTO11Y_AUTH_TOKEN set?)",
+            exc_info=True,
+        )
+
 
 def shutdown() -> None:
     """Flush and shut down the OTel providers."""
-    global _tp, _mp  # noqa: PLW0603
+    global _tp, _mp, _agento11y_client  # noqa: PLW0603
+
+    # Client first: it flushes generations and emits final OTel metrics.
+    if _agento11y_client is not None:
+        _agento11y_client.shutdown()
+        _agento11y_client = None
 
     if _tp is not None:
         _tp.shutdown()
