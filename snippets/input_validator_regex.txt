@@ -1,0 +1,1 @@
+Create a Pokemon trivia question based on this context: \{'name': '[^']+', 'height': \d+, 'weight': \d+, 'types': \[[^\]]*\], 'abilities': \[[^\]]*\]\}
