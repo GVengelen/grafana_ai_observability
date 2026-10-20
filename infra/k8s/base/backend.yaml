@@ -24,17 +24,15 @@ spec:
                 name: pokemon-qa-config
             - secretRef:
                 name: pokemon-qa-secrets
+          startupProbe:
+            httpGet: { path: /healthz, port: 8000 }
+            periodSeconds: 2
+            failureThreshold: 30
           readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 60
+            httpGet: { path: /healthz, port: 8000 }
+            periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8000
-            initialDelaySeconds: 10
+            httpGet: { path: /healthz, port: 8000 }
             periodSeconds: 60
           resources:
             requests:
